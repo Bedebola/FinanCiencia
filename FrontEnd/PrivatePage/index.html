@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financiência - Meus Projetos</title>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Roboto:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+        integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+        integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+        integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <script type="text/javascript">
+
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const idProjeto = urlParams.get("idProjeto");
+
+        window.onload = function () {
+            carregarProjetos();
+            validarCampos();
+
+            document.getElementById("tituloInput").addEventListener("input", validarCampos);
+            document.getElementById("descricaoInput").addEventListener("input", validarCampos);
+            document.getElementById("alunosInput").addEventListener("input", validarCampos);
+            document.getElementById("emailInput").addEventListener("input", validarCampos);
+        };
+
+        function validarCampos() {
+            const salvarButton = document.getElementById('salvar');
+            const titulo = document.getElementById("tituloInput").value;
+            const descricao = document.getElementById("descricaoInput").value;
+            const alunos = document.getElementById("alunosInput").value;
+            const email = document.getElementById("emailInput").value;
+
+            if (titulo && descricao && alunos && email) {
+                salvarButton.disabled = false;
+            } else {
+                salvarButton.disabled = true;
+            }
+        }
+
+        function carregarProjetos() {
+            axios
+                .get("http://localhost:8080/projeto/listar")
+                .then(response => {
+                    const tbody = document.querySelector('#tabelaProjetos tbody');
+                    if (tbody) {
+                        tbody.innerHTML = '';
+                    }
+
+                    response.data.forEach(projeto => {
+                        const linha = `
+                            <tr>
+                                <td><i class="bi bi-pencil-fill" onclick="abrirEdicao(${projeto.id})"></i></td>
+                                <td><i class="bi bi-trash3-fill" onclick="confirmarDelete(${projeto.id})"></i></td>
+                                <td>${projeto.tituloProjeto}</td>
+                                <td>${projeto.nomeUniversidade}</td>
+                            </tr>
+                        `;
+
+                        if (tbody) {
+                            tbody.innerHTML += linha;
+                        }
+                    });
+                })
+                .catch(error => console.error("Erro ao carregar os projetos:", error));
+        }
+
+        function buscarProjeto(tituloProjeto) {
+            axios
+                .get("http://localhost:8080/projeto/buscar", {
+                    params: {
+                        tituloProjeto: tituloProjeto
+                    }
+                })
+                .then(response => {
+                    const tbody = document.querySelector('#tabelaProjetos tbody');
+
+                    if (tbody) {
+                        tbody.innerHTML = '';
+                    }
+
+                    response.data.forEach(projeto => {
+                        const linha = `
+                    <tr>
+                        <td>
+                            <i class="bi bi-pencil-fill" onclick="abrirEdicao(${projeto.id})"></i>
+                        </td>
+                        <td>
+                            <i class="bi bi-trash3-fill" onclick="deletarProjeto(${projeto.id})"></i>
+                        </td>
+                        <td>${projeto.tituloProjeto}</td>
+                        <td>${projeto.nomeUniversidade}</td>
+                    </tr>
+                `;
+
+                        if (tbody) {
+                            tbody.innerHTML += linha;
+                        }
+                    });
+                })
+                .catch((error) => {
+                    if (error.response && error.response.status === 404) {
+                        const titleOk = document.getElementById("dialogOkTitle");
+                        titleOk.innerHTML = 'Erro!';
+                        const bodyOk = document.getElementById("dialogOkBody");
+                        bodyOk.innerHTML = 'Nenhum projeto localizado';
+                        const tabelaProjetos = document.getElementById("tabelaProjetos");
+                        tabelaProjetos.innerHTML = '';  // Certifique-se de que a variável tabelaProjetos está corretamente referenciada
+                        mensagemOk();
+                    } else {
+                        console.error("Erro ao buscar o projeto:", error);
+                        alert("Ocorreu um erro ao buscar o projeto. Por favor, tente novamente.");
+                    }
+                });
+        }
+
+        function carregarCidades(cidadeSelecionada = null) {
+            axios
+                .get("http://localhost:8080/cidades/listar")
+                .then(response => {
+                    const cidadeInput = document.getElementById("cidadeInput");
+                    cidadeInput.innerHTML = '';
+                    response.data.forEach(cidade => {
+                        const opcao = document.createElement('option');
+                        opcao.value = cidade.id;
+                        opcao.textContent = cidade.nome;
+                        if (cidade.id === cidadeSelecionada) {
+                            opcao.selected = true;
+                        }
+                        cidadeInput.appendChild(opcao);
+                    });
+                })
+                .catch(error => console.error("Erro ao carregar cidades:", error));
+        }
+
+        function carregarUniversidades(universidadeSelecionada = null) {
+            axios
+                .get("http://localhost:8080/universidades/listar")
+                .then(response => {
+                    const universidadeInput = document.getElementById("universidadeInput");
+                    universidadeInput.innerHTML = '';
+                    response.data.forEach(universidade => {
+                        const opcao = document.createElement('option');
+                        opcao.value = universidade.id;
+                        opcao.textContent = universidade.nome;
+                        if (universidade.id === universidadeSelecionada) {
+                            opcao.selected = true;
+                        }
+                        universidadeInput.appendChild(opcao);
+                    });
+                })
+                .catch(error => console.error("Erro ao carregar universidades:", error));
+        }
+
+        function abrirEdicao(idProjeto) {
+            axios
+                .get(`http://localhost:8080/projeto/visualizar/${idProjeto}`)
+                .then(response => {
+                    const data = response.data;
+                    document.getElementById("tituloInput").value = data.tituloProjeto;
+                    document.getElementById("descricaoInput").value = data.descricaoProjeto;
+                    document.getElementById("alunosInput").value = data.alunos;
+                    document.getElementById("emailInput").value = data.email;
+                    document.getElementById("cidadeInput").value = data.nomeCidade;
+                    document.getElementById("universidadeInput").value = data.nomeUniversidade;
+                    carregarCidades(data.cidade.id);
+                    carregarUniversidades(data.universidade.id);
+
+                    validarCampos();
+
+                    const salvarButton = document.getElementById('salvar');
+                    salvarButton.onclick = () => salvarEdicao(idProjeto);
+                    const voltarButton = document.getElementById('voltar');
+                    voltarButton.onclick = () => formProjeto.close(window.location.reload());
+                    const dialogVerProjeto = document.getElementById("formProjeto");
+                    dialogVerProjeto.showModal();
+                })
+                .catch(error => {
+                    console.error("Erro ao carregar dados do projeto:", error);
+                });
+        }
+
+        function salvarEdicao(idProjeto) {
+            const data = {
+                tituloProjeto: document.getElementById("tituloInput").value,
+                descricaoProjeto: document.getElementById("descricaoInput").value,
+                alunos: document.getElementById("alunosInput").value,
+                email: document.getElementById("emailInput").value,
+                cidade: { id: document.getElementById("cidadeInput").value },
+                universidade: { id: document.getElementById("universidadeInput").value }
+            };
+
+            axios
+                .put(`http://localhost:8080/projeto/editar/${idProjeto}`, data)
+                .then((response) => {
+                    if (response.status === 200) {
+                        const titleOk = document.getElementById("dialogOkTitle");
+                        titleOk.innerHTML = 'Sucesso!';
+                        const bodyOk = document.getElementById("dialogOkBody");
+                        bodyOk.innerHTML = 'Alterações salvas!';
+                        mensagemOk();
+                    }
+                })
+                .catch((error) => {
+                    alert("Erro ao atualizar projeto!");
+                });
+        }
+
+        function novoProjeto() {
+            carregarCidades();
+            carregarUniversidades();
+            const salvarButton = document.getElementById('salvar');
+            salvarButton.onclick = salvarNovoProjeto;
+            const voltarButton = document.getElementById('voltar');
+            voltarButton.onclick = () => formProjeto.close(window.location.reload());
+            const dialogNovoProjeto = document.getElementById("formProjeto");
+            dialogNovoProjeto.showModal();
+        }
+
+        function salvarNovoProjeto() {
+            const data = {
+                tituloProjeto: document.getElementById("tituloInput").value,
+                descricaoProjeto: document.getElementById("descricaoInput").value,
+                alunos: document.getElementById("alunosInput").value,
+                email: document.getElementById("emailInput").value,
+                cidade: { id: document.getElementById("cidadeInput").value },
+                universidade: { id: document.getElementById("universidadeInput").value }
+            };
+
+            axios
+                .post("http://localhost:8080/projeto/novo", data)
+                .then((response) => {
+                    if (response.status === 200) {
+                        const titleOk = document.getElementById("dialogOkTitle");
+                        titleOk.innerHTML = 'Sucesso!';
+                        const bodyOk = document.getElementById("dialogOkBody");
+                        bodyOk.innerHTML = 'O novo projeto foi incluído com sucesso!';
+                        mensagemOk();
+                    }
+                })
+                .catch(error => {
+                    const titleOk = document.getElementById("dialogOkTitle");
+                    titleOk.innerHTML = 'Erro!';
+                    const bodyOk = document.getElementById("dialogOkBody");
+                    bodyOk.innerHTML = 'Erro ao salvar projeto!';
+                });
+        }
+
+        function confirmarDelete(idProjeto) {
+    const dialogConfirm = document.getElementById('dialogConfirm');
+    document.getElementById('dialogConfirmBody').textContent = `Deseja realmente excluir o projeto?`;
+    dialogConfirm.showModal();
+
+    const cancelarButton = document.getElementById('cancelar');
+    cancelarButton.onclick = () => {
+        dialogConfirm.close();
+    };
+
+    const confirmarButton = document.getElementById('confirmar');
+    confirmarButton.onclick = () => {
+        deletarProjeto(idProjeto);
+        dialogConfirm.close();
+    };
+}
+
+function deletarProjeto(idProjeto) {
+    axios
+        .delete(`http://localhost:8080/projeto/deletar/${idProjeto}`)
+        .then(response => {
+            const titleOk = document.getElementById("dialogOkTitle");
+            titleOk.innerHTML = 'Sucesso!';
+            const bodyOk = document.getElementById("dialogOkBody");
+            bodyOk.innerHTML = 'Projeto deletado com sucesso!';
+            mensagemOk();
+        })
+        .catch(error => {
+            const titleOk = document.getElementById("dialogOkTitle");
+            titleOk.innerHTML = 'Erro!';
+            const bodyOk = document.getElementById("dialogOkBody");
+            bodyOk.innerHTML = 'Ocorreu um erro ao deletar o projeto!';
+            mensagemOk();
+        });
+}
+
+        function mensagemOk() {
+            const okButton = document.getElementById('ok');
+            okButton.onclick = () => dialogOk.close(window.location.reload());
+            const okDialog = document.getElementById("dialogOk");
+            okDialog.showModal();
+        }
+
+    </script>
+
+</head>
+
+<header>
+    <div class="div-header" id="header">
+        <i class="bi bi-plus-circle-fill" onclick="novoProjeto()"> Novo Projeto</i>
+    </div>
+    <div>
+        <a class="bi bi-x-circle-fill" href="/LoginPage/index.html"> Sair</a>
+    </div>
+
+    <div id="buscarInput">
+        <label for="buscar">Buscar Projeto:</label>
+        <input type="text" id="buscar" placeholder="Insira o titulo do Projeto">
+        <button type="button" onclick="buscarProjeto(document.getElementById('buscar').value)">Buscar</button>
+    </div>
+</header>
+
+
+<body>
+    <div>
+        <table class="table table-striped" id="tabelaProjetos">
+            <thead>
+                <tr>
+                    <th scope="col">Editar</th>
+                    <th scope="col">Deletar</th>
+                    <th scope="col" id="nomeColuna">Titulo do Projeto</th>
+                    <th scope="col" id="codBarrasColuna">Universidade</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            </tbody>
+        </table>
+    </div>
+
+    <dialog id="formProjeto">
+        <form method="dialog">
+            <section>
+
+                <div id="divDialogCabecalho">
+                    <h2>
+                        <label for="tituloInput">Título do Projeto:</label>
+                        <input type="text" id="tituloInput" placeholder="Insira o titulo do Projeto" data-required>
+                    </h2>
+                </div>
+
+                <p>
+                    <i class="bi bi-file-text-fill"></i>
+                    <label for="descricaoInput">Descrição:</label>
+                    <input type="text" id="descricaoInput" placeholder="Descrição do Projeto" data-required>
+                </p>
+                <p>
+                    <i class="bi bi-person-circle"></i>
+                    <label for="alunosInput">Alunos Responsáveis</label>
+                    <input type="text" id="alunosInput" placeholder="Alunos Reponsáveis" data-required>
+                </p>
+                <p>
+                    <i class="bi bi-envelope-fill"></i>
+                    <label for="emailInput">E-mail:</label>
+                    <input type="text" id="emailInput" placeholder="e-mail" data-required>
+                </p>
+                <p>
+                    <i class="bi bi-mortarboard-fill"></i>
+                    <label for="universidadeInput">Universidade: </label>
+                    <select id="universidadeInput">
+
+                    </select>
+                </p>
+                <p>
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <label for="cidadeInput">Cidade: </label>
+                    <select id="cidadeInput">
+
+                    </select>
+                </p>
+
+            </section>
+            <menu>
+                <button id="voltar" type="reset">Voltar</button>
+                <button id="salvar" type="submit">Salvar</button>
+            </menu>
+        </form>
+    </dialog>
+
+
+    <dialog id="dialogOk">
+        <section>
+            <h2 id="dialogOkTitle"></h2>
+            <p id="dialogOkBody"></p>
+            <menu>
+                <button id="ok" type="submit">Ok!</button> <!--TEXTO DE TESTE, AJUSTAR DEPOIS-->
+            </menu>
+        </section>
+    </dialog>
+
+    <dialog id="dialogConfirm">
+        <section>
+            <h2 id="dialogConfirmTittle">
+                Atenção!
+            </h2>
+            <p id="dialogConfirmBody">
+                Deseja realmente excluir o projeto?
+            </p>
+            <menu>
+                <button id="cancelar" type="reset">Cancelar</button>
+                <button id="confirmar" type="submit">Confirmar</button>
+            </menu>
+        </section>
+    </dialog>
+
+
+</body>
+
+
+</body>
+
+</html>
